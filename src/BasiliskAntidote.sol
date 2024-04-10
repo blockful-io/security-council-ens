@@ -8,8 +8,8 @@ import { ReverseClaimer } from "./ReverseClaimer.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract BasiliskAntidote is ReverseClaimer, AccessControl {
-    IWallet immutable public daoWallet;
-    bytes32 constant public VETO_ROLE = keccak256("VETO_ROLE");
+    IWallet public immutable daoWallet;
+    bytes32 public constant VETO_ROLE = keccak256("VETO_ROLE");
 
     constructor(IWallet _daoWallet, IRegistry ensRegistry) ReverseClaimer(ensRegistry, msg.sender) {
         daoWallet = _daoWallet;
