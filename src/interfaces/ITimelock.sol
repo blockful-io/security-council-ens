@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
-interface IWallet {
+interface ITimelock {
     event CallExecuted(bytes32 indexed id, uint256 indexed index, address target, uint256 value, bytes data);
     event CallScheduled(
         bytes32 indexed id,

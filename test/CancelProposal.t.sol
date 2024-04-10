@@ -4,12 +4,12 @@ pragma solidity ^0.8.13;
 import { Test, console } from "forge-std/Test.sol";
 import { IGovernor } from "../src/interfaces/IGovernor.sol";
 import { IToken } from "../src/interfaces/IToken.sol";
-import { IWallet } from "../src/interfaces/IWallet.sol";
+import { ITimelock } from "../src/interfaces/ITimelock.sol";
 
 contract CounterTest is Test {
     IToken public token;
     IGovernor public governor;
-    IWallet public timelock;
+    ITimelock public timelock;
     bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256("TIMELOCK_ADMIN_ROLE");
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
@@ -21,7 +21,7 @@ contract CounterTest is Test {
 
         token = IToken(0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72);
         governor = IGovernor(0x323A76393544d5ecca80cd6ef2A560C6a395b7E3);
-        timelock = IWallet(payable(0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7));
+        timelock = ITimelock(payable(0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7));
 
         labelAddresses();
     }
@@ -96,10 +96,14 @@ contract CounterTest is Test {
         governor.execute(targets, values, calldatas, descriptionHash);
         assertTrue(timelock.isOperationDone(proposalIdInTimelock));
 
+        // Check result
         assertTrue(timelock.hasRole(PROPOSER_ROLE, voter));
         assertFalse(timelock.hasRole(PROPOSER_ROLE, address(governor)));
         assertEq(address(timelock).balance, 0);
-        // To cancel the operation, the status needs to be pending and only the PROPOSAL_ROLE can call it
+
+        // NOTE: is timelock useless if there is no way to cancel it.
+        // A solution could be a cancel function called by a major delegate that pauses
+        // the timelock for a urgent voting?
     }
 
     /// @dev Labels the most relevant addresses.
