@@ -35,9 +35,6 @@ contract CounterTest is Test {
 
         bool governorIsProposerInWallet = daoWallet.hasRole(PROPOSER_ROLE, address(governor));
         assertTrue(governorIsProposerInWallet);
-
-        uint256 votingPower = token.getVotes(voter);
-        assertEq(votingPower, 55_004_056_347_480_195_848_226_739);
     }
 
     function test_AttackDAO() public {
@@ -45,11 +42,15 @@ contract CounterTest is Test {
         vm.prank(0xd7A029Db2585553978190dB5E85eC724Aa4dF23f);
         token.delegate(voter);
 
-        // Need to advance 1 block for delegation to be valid
+        uint256 votingPower = token.getVotes(voter);
+        assertEq(votingPower, 55_004_056_347_480_195_848_226_739);
+
+        // Need to advance 1 block for delegation to be valid on governor
         vm.roll(block.number + 1);
 
-    
-        // Creating a proposal that gives a proposer role to 
+
+
+        // Creating a proposal that gives a proposer role to
         address[] memory targets = new address[](1);
         targets[0] = address(daoWallet);
         uint256[] memory values = new uint256[](1);
@@ -57,25 +58,28 @@ contract CounterTest is Test {
         bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encodeCall(daoWallet.grantRole, (daoWallet.PROPOSER_ROLE(), voter));
 
-        uint256 votingPower = token.getVotes(voter);
-        assertEq(votingPower, 55_004_056_347_480_195_848_226_739);
         console.log(governor.proposalThreshold());
 
         // Governor //
         // Submit malicious proposal
         vm.prank(voter);
         uint256 proposalId = governor.propose(targets, values, calldatas, "");
+        assertEq(governor.state(proposalId), 0);
 
-        // Proposal is ready to vote after 1 block
-        vm.roll(block.number + 10);
+        // Proposal is ready to vote after 2 block because of the revert ERC20Votes: block not yet mined
+        vm.roll(block.number + governor.votingDelay() + 1);
+        assertEq(governor.state(proposalId), 1);
 
         // Vote for the proposal
         vm.prank(voter);
         governor.castVote(proposalId, 1);
-        // Let the vote end
+
+        // Let the voting end
+        vm.roll(block.number + governor.votingPeriod());
+        assertEq(governor.state(proposalId), 4);
 
         // Queue the proposal to be executed
-        //// Test if Operation status on timelock is Pending
+        //// Test if Operation status on timelock is Pending and investigate what state is returned on state()
 
         // Wait the operation in the DAO wallet timelock to be Ready
 

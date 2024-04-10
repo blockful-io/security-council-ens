@@ -103,7 +103,7 @@ interface IGovernor {
 
     function quorumNumerator() external view returns (uint256);
 
-    function state(uint256 proposalId) external view returns (ProposalState);
+    function state(uint256 proposalId) external view returns (uint8);
 
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
