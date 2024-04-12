@@ -14,6 +14,7 @@ contract BasiliskAntidote is ReverseClaimer, AccessControl {
     constructor(ITimelock _daoWallet, IRegistry ensRegistry) ReverseClaimer(ensRegistry, msg.sender) {
         timelock = _daoWallet;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(VETO_ROLE, msg.sender);
     }
 
     // Only admin
