@@ -7,13 +7,13 @@ import { IToken } from "../src/interfaces/IToken.sol";
 import { ITimelock } from "../src/interfaces/ITimelock.sol";
 import { IRegistry } from "../src/interfaces/IRegistry.sol";
 
-import { BasiliskAntidote } from "../src/BasiliskAntidote.sol";
+import { SecurityCouncilVeto } from "../src/SecurityCouncilVeto.sol";
 
-contract CounterTest is Test {
+contract SecurityCouncilVeto_Test is Test {
     IToken public token;
     IGovernor public governor;
     ITimelock public timelock;
-    BasiliskAntidote public basiliskAntidote;
+    SecurityCouncilVeto public securityCouncilVeto;
     bytes32 public constant TIMELOCK_ADMIN_ROLE = keccak256("TIMELOCK_ADMIN_ROLE");
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
@@ -27,7 +27,7 @@ contract CounterTest is Test {
         token = IToken(0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72);
         governor = IGovernor(0x323A76393544d5ecca80cd6ef2A560C6a395b7E3);
         timelock = ITimelock(payable(0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7));
-        basiliskAntidote = new BasiliskAntidote(timelock, IRegistry(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e));
+        securityCouncilVeto = new SecurityCouncilVeto(timelock, IRegistry(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e));
 
         labelAddresses();
     }
@@ -41,6 +41,8 @@ contract CounterTest is Test {
     }
 
     function test_DefenseDAO() public {
+        // Submit security council proposal
+
         // Delegate from top token holder (binance, with 4m $ENS in this case)
         vm.prank(0x5a52E96BAcdaBb82fd05763E25335261B270Efcb);
         token.delegate(voter);
@@ -57,13 +59,12 @@ contract CounterTest is Test {
         uint256[] memory values = new uint256[](1);
         values[0] = 0;
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeCall(timelock.grantRole, (timelock.PROPOSER_ROLE(), address(basiliskAntidote)));
+        calldatas[0] = abi.encodeCall(timelock.grantRole, (timelock.PROPOSER_ROLE(), address(securityCouncilVeto)));
 
         string memory description = "";
         bytes32 descriptionHash = keccak256(bytes(description));
 
         // Governor //
-        // Submit malicious proposal
         vm.prank(voter);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
         assertEq(governor.state(proposalId), 0);
@@ -97,7 +98,7 @@ contract CounterTest is Test {
         assertTrue(timelock.isOperationDone(proposalIdInTimelock));
 
         // Check result
-        assertTrue(timelock.hasRole(PROPOSER_ROLE, address(basiliskAntidote)));
+        assertTrue(timelock.hasRole(PROPOSER_ROLE, address(securityCouncilVeto)));
 
         // Start attack
         // Delegate from top token holder (binance, with 4m $ENS in this case)
@@ -153,7 +154,7 @@ contract CounterTest is Test {
         bytes32 proposalIdInTimelock2 = timelock.hashOperationBatch(targets2, values2, calldatas2, 0, descriptionHash2);
         assertTrue(timelock.isOperationPending(proposalIdInTimelock2));
 
-        basiliskAntidote.veto(proposalIdInTimelock2);
+        securityCouncilVeto.veto(proposalIdInTimelock2);
 
         // Wait the operation in the DAO wallet timelock to be Ready
         vm.warp(block.timestamp + timelock.getMinDelay() + 1);
@@ -174,7 +175,7 @@ contract CounterTest is Test {
         vm.label({ account: voter, newLabel: "VOTER" });
         vm.label({ account: address(governor), newLabel: "governor" });
         vm.label({ account: address(timelock), newLabel: "timelock" });
-        vm.label({ account: address(basiliskAntidote), newLabel: "basiliskAntidote" });
+        vm.label({ account: address(securityCouncilVeto), newLabel: "securityCouncilVeto" });
         vm.label({ account: address(token), newLabel: "token" });
     }
 }

@@ -6,7 +6,7 @@ import { IGovernor } from "../src/interfaces/IGovernor.sol";
 import { IToken } from "../src/interfaces/IToken.sol";
 import { ITimelock } from "../src/interfaces/ITimelock.sol";
 
-contract CounterTest is Test {
+contract Attack_DAO_Test is Test {
     IToken public token;
     IGovernor public governor;
     ITimelock public timelock;
@@ -34,7 +34,7 @@ contract CounterTest is Test {
         assertTrue(governorIsProposer);
     }
 
-    function test_AttackDAO() public {
+    function test_Attack_DAO() public {
         // Delegate from top token holder (binance, with 4m $ENS in this case)
         vm.prank(0x5a52E96BAcdaBb82fd05763E25335261B270Efcb);
         token.delegate(attacker);
