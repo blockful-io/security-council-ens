@@ -10,26 +10,35 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 contract SecurityCouncilVeto is ReverseClaimer, AccessControl {
     ITimelock public immutable timelock;
     uint256 public immutable expiration;
+
     bytes32 public constant VETO_ROLE = keccak256("VETO_ROLE");
 
-    constructor(ITimelock _daoWallet, IRegistry ensRegistry) ReverseClaimer(ensRegistry, msg.sender) {
-        timelock = _daoWallet;
-        expiration = block.timestamp;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(VETO_ROLE, msg.sender);
+    error NotExpired();
+
+    constructor(
+        address securityCouncilMultisig,
+        ITimelock _timelock,
+        IRegistry ensRegistry
+    )
+        ReverseClaimer(ensRegistry, msg.sender)
+    {
+        timelock = _timelock;
+
+        // 2 years of expiration
+        expiration = block.timestamp + (2 * 365 days);
+
+        _grantRole(VETO_ROLE, securityCouncilMultisig);
     }
 
-    // Only admin
     function veto(bytes32 proposalId) external onlyRole(VETO_ROLE) {
-        // call cancel() on DAO wallet
         timelock.cancel(proposalId);
     }
 
     function renounceVetoRoleByExpiration() public {
-        if (expiration < block.timestamp) {
-            revert();
+        if (expiration > block.timestamp) {
+            revert NotExpired();
         }
 
-        revokeRole(VETO_ROLE, address(this));
+        timelock.renounceRole(timelock.PROPOSER_ROLE(), address(this));
     }
 }

@@ -20,6 +20,8 @@ contract SecurityCouncilVeto_Test is Test {
 
     address voter = address(0x1);
     address attacker = address(0x2);
+    address deployer = address(0x3);
+    address securityCouncilMultisig = address(0x4);
 
     function setUp() public {
         vm.createSelectFork({ blockNumber: 19_618_708, urlOrAlias: "mainnet" });
@@ -27,7 +29,11 @@ contract SecurityCouncilVeto_Test is Test {
         token = IToken(0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72);
         governor = IGovernor(0x323A76393544d5ecca80cd6ef2A560C6a395b7E3);
         timelock = ITimelock(payable(0xFe89cc7aBB2C4183683ab71653C4cdc9B02D44b7));
-        securityCouncilVeto = new SecurityCouncilVeto(timelock, IRegistry(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e));
+
+        vm.prank(deployer);
+        securityCouncilVeto = new SecurityCouncilVeto(
+            securityCouncilMultisig, timelock, IRegistry(0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e)
+        );
 
         labelAddresses();
     }
@@ -40,7 +46,7 @@ contract SecurityCouncilVeto_Test is Test {
         assertTrue(governorIsProposer);
     }
 
-    function test_DefenseDAO() public {
+    function test_Vetoing_Malicious_Proposal() public {
         // Give security council contract the role
         vm.startPrank(address(timelock));
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(securityCouncilVeto));
@@ -95,28 +101,65 @@ contract SecurityCouncilVeto_Test is Test {
         vm.roll(block.number + governor.votingPeriod());
         assertEq(governor.state(proposalId), 4);
 
-        // Queue the proposal to be executed
+        // Proposal is queued as an operation to be executed by the timelock
         governor.queue(targets, values, calldatas, descriptionHash);
         assertEq(governor.state(proposalId), 5);
 
         // Calculate proposalId in timelock
-        bytes32 proposalIdInTimelock2 = timelock.hashOperationBatch(targets, values, calldatas, 0, descriptionHash);
-        assertTrue(timelock.isOperationPending(proposalIdInTimelock2));
+        bytes32 proposalIdInTimelock = timelock.hashOperationBatch(targets, values, calldatas, 0, descriptionHash);
+        assertTrue(timelock.isOperationPending(proposalIdInTimelock));
 
-        securityCouncilVeto.veto(proposalIdInTimelock2);
+        // Check that operation exists
+        assertTrue(timelock.isOperation(proposalIdInTimelock));
 
-        // Wait the operation in the DAO wallet timelock to be Ready
+        // Expect to revert because isn't the security council multisig calling the veto
+        vm.expectRevert();
+        vm.prank(deployer);
+        securityCouncilVeto.veto(proposalIdInTimelock);
+
+        // Security Council vetoing. Canceling the operation on timelock
+        vm.prank(securityCouncilMultisig);
+        securityCouncilVeto.veto(proposalIdInTimelock);
+
+        // Check that operation doesn't exists anymore
+        assertFalse(timelock.isOperation(proposalIdInTimelock));
+
+        // In the usual flow of the proposal this would return true
         vm.warp(block.timestamp + timelock.getMinDelay() + 1);
-        assertFalse(timelock.isOperationReady(proposalIdInTimelock2));
+        assertFalse(timelock.isOperationReady(proposalIdInTimelock));
 
-        // Execute proposal
+        // Try to execute operation
         vm.expectRevert("TimelockController: operation is not ready");
         governor.execute(targets, values, calldatas, descriptionHash);
-        assertFalse(timelock.isOperationDone(proposalIdInTimelock2));
+        assertFalse(timelock.isOperationDone(proposalIdInTimelock));
 
-        // Check result
+        // Check that the malicious proposal didn't had any effect.
         assertFalse(timelock.hasRole(PROPOSER_ROLE, attacker));
         assertTrue(timelock.hasRole(PROPOSER_ROLE, address(governor)));
+    }
+
+    function test_Role_Expiration() public {
+        vm.prank(address(timelock));
+        timelock.grantRole(PROPOSER_ROLE, address(securityCouncilVeto));
+
+        // Check result
+        assertTrue(timelock.hasRole(PROPOSER_ROLE, address(securityCouncilVeto)));
+
+        // Advance timestamp near to expiration
+        vm.warp(securityCouncilVeto.expiration() - 1);
+
+        // Expect to revert because still no expired
+        vm.expectRevert(SecurityCouncilVeto.NotExpired.selector);
+        securityCouncilVeto.renounceVetoRoleByExpiration();
+
+        // Advance timestamp to expiration
+        vm.warp(securityCouncilVeto.expiration());
+
+        // Any address can renounce, once the expiration hits.
+        securityCouncilVeto.renounceVetoRoleByExpiration();
+
+        // Checks that the security council has no role on timelock
+        assertFalse(timelock.hasRole(PROPOSER_ROLE, address(securityCouncilVeto)));
     }
 
     /// @dev Labels the most relevant addresses.
