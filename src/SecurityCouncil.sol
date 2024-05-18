@@ -49,7 +49,7 @@ contract SecurityCouncil is ReverseClaimer, Ownable {
     /**
      * @dev Function to renounce the veto role after expiration.
      */
-    function renounceVetoRoleByExpiration() public {
+    function renounceVetoRoleByExpiration() external {
         if (block.timestamp < expiration) {
             revert ExpirationNotReached();
         }
