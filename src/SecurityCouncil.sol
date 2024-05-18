@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.25;
 
 import { ITimelock } from "./interfaces/ITimelock.sol";
 import { IRegistry } from "./interfaces/IRegistry.sol";
 
 import { ReverseClaimer } from "./ReverseClaimer.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title SecurityCouncil
  * @dev A contract to cancel proposals in the timelock, controlled by a Security Council multisig.
  */
-contract SecurityCouncil is ReverseClaimer, AccessControl {
+contract SecurityCouncil is ReverseClaimer, Ownable {
     ITimelock public immutable timelock;
     uint256 public immutable expiration;
-
-    bytes32 public constant VETO_ROLE = keccak256("VETO_ROLE");
 
     error ExpirationNotReached();
 
@@ -37,14 +35,14 @@ contract SecurityCouncil is ReverseClaimer, AccessControl {
         // Set expiration to 2 years from deployment
         expiration = block.timestamp + (2 * 365 days);
 
-        _grantRole(VETO_ROLE, securityCouncilMultisig);
+        _transferOwnership(securityCouncilMultisig);
     }
 
     /**
      * @dev Function to cancel a proposal in the timelock.
      * @param proposalId ID of the proposal to cancel.
      */
-    function veto(bytes32 proposalId) external onlyRole(VETO_ROLE) {
+    function veto(bytes32 proposalId) external onlyOwner {
         timelock.cancel(proposalId);
     }
 
