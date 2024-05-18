@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { Security_Council_Unit_Concrete_Test } from "./securityCouncil.t.sol";
+import { Security_Council_Integration_Concrete_Test } from "./securityCouncil.t.sol";
 
-contract Veto_Unit_Concrete_Test is Security_Council_Unit_Concrete_Test {
+contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete_Test {
     bytes32 proposalIdInTimelock;
     address[] targets;
     uint256[] values;
@@ -11,7 +11,7 @@ contract Veto_Unit_Concrete_Test is Security_Council_Unit_Concrete_Test {
     bytes32 descriptionHash;
 
     function setUp() public virtual override {
-        Security_Council_Unit_Concrete_Test.setUp();
+        Security_Council_Integration_Concrete_Test.setUp();
 
         // Delegate from top token holder (binance, with 4m $ENS in this case)
         vm.prank(0x5a52E96BAcdaBb82fd05763E25335261B270Efcb);
