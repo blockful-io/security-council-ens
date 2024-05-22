@@ -5,13 +5,13 @@ import { ITimelock } from "./interfaces/ITimelock.sol";
 import { IRegistry } from "./interfaces/IRegistry.sol";
 
 import { ReverseClaimer } from "./ReverseClaimer.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /**
  * @title SecurityCouncil
  * @dev A contract to cancel proposals in the timelock, controlled by a Security Council multisig.
  */
-contract SecurityCouncil is ReverseClaimer, Ownable {
+contract SecurityCouncil is ReverseClaimer, Ownable2Step {
     ITimelock public immutable timelock;
     uint256 public immutable expiration;
 
@@ -35,7 +35,8 @@ contract SecurityCouncil is ReverseClaimer, Ownable {
         // Set expiration to 2 years from deployment
         expiration = block.timestamp + (2 * 365 days);
 
-        _transferOwnership(securityCouncilMultisig);
+        // security council multisig needs to call acceptOwnership()
+        transferOwnership(securityCouncilMultisig);
     }
 
     /**

@@ -10,5 +10,9 @@ contract Security_Council_Integration_Concrete_Test is Base_Test {
         // grants role to security council in timelock
         vm.prank(address(timelock));
         timelock.grantRole(PROPOSER_ROLE, address(securityCouncil));
+
+        // security council multisig accepting ownership
+        vm.prank(users.securityCouncilMultisig);
+        securityCouncil.acceptOwnership();
     }
 }
