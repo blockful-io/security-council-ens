@@ -12,6 +12,16 @@ import { Users } from "./utils/Types.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
 contract Base_Test is Test {
+    enum ProposalState {
+        Pending,
+        Active,
+        Canceled,
+        Defeated,
+        Succeeded,
+        Queued,
+        Expired,
+        Executed
+    }
     /*//////////////////////////////////////////////////////////////////////////
                                      VARIABLES
     //////////////////////////////////////////////////////////////////////////*/

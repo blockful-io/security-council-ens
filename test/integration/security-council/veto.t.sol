@@ -43,11 +43,11 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
         // Submit malicious proposal
         vm.prank(users.attacker);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
-        assertEq(governor.state(proposalId), 0);
+        assertEq(governor.state(proposalId), uint8(ProposalState.Pending));
 
         // Proposal is ready to vote after 2 block because of the revert ERC20Votes: block not yet mined
         vm.roll(block.number + governor.votingDelay() + 1);
-        assertEq(governor.state(proposalId), 1);
+        assertEq(governor.state(proposalId), uint8(ProposalState.Active));
 
         // Vote for the proposal
         vm.prank(users.attacker);
@@ -55,11 +55,11 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
 
         // Let the voting end
         vm.roll(block.number + governor.votingPeriod());
-        assertEq(governor.state(proposalId), 4);
+        assertEq(governor.state(proposalId), uint8(ProposalState.Succeeded));
 
         // Proposal is queued as an operation to be executed by the timelock
         governor.queue(targets, values, calldatas, descriptionHash);
-        assertEq(governor.state(proposalId), 5);
+        assertEq(governor.state(proposalId), uint8(ProposalState.Queued));
 
         // Calculate proposalId in timelock
         proposalIdInTimelock = timelock.hashOperationBatch(targets, values, calldatas, 0, descriptionHash);
