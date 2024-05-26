@@ -5,6 +5,7 @@ import { Security_Council_Integration_Concrete_Test } from "./securityCouncil.t.
 
 contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete_Test {
     bytes32 proposalIdInTimelock;
+    uint256 proposalId;
     address[] targets;
     uint256[] values;
     bytes[] calldatas;
@@ -42,7 +43,7 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
 
         // Submit malicious proposal
         vm.prank(users.attacker);
-        uint256 proposalId = governor.propose(targets, values, calldatas, description);
+        proposalId = governor.propose(targets, values, calldatas, description);
         assertEq(governor.state(proposalId), uint8(ProposalState.Pending));
 
         // Proposal is ready to vote after 2 block because of the revert ERC20Votes: block not yet mined
@@ -93,11 +94,27 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
 
     function test_Veto_Random_User_Trying_Veto() public {
         // Expect to revert because isn't the security council multisig calling the veto
-        vm.expectRevert();
+        vm.expectRevert("Ownable: caller is not the owner");
         vm.prank(users.alice);
         securityCouncil.veto(proposalIdInTimelock);
 
         // Check that operation still exists
         assertTrue(timelock.isOperation(proposalIdInTimelock));
+    }
+
+    function test_Queue_After_Veto_Should_Fail() public {
+        // Check state before veto
+        assertEq(governor.state(proposalId), uint8(ProposalState.Queued));
+
+        // Veto happened
+        test_Veto_Security_Coucil_Vetoing();
+
+        // Check state after veto, still the same as before the veto
+        assertEq(governor.state(proposalId), uint8(ProposalState.Queued));
+
+        // Expect to revert when trying to queue the same proposal.
+        vm.expectRevert("Governor: proposal not successful");
+        governor.queue(targets, values, calldatas, descriptionHash);
+        assertEq(governor.state(proposalId), uint8(ProposalState.Queued));
     }
 }
