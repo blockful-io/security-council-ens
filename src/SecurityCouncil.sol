@@ -9,13 +9,15 @@ import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /**
  * @title SecurityCouncil
- * @dev A contract to cancel proposals in the timelock, controlled by a Security Council multisig.
+ * @dev A contract to cancel proposals in the ENS timelock, controlled by the Security Council multisig.
+ * @author Alexandro Netto - <alex@blockful.io>
  */
 contract SecurityCouncil is ReverseClaimer, Ownable2Step {
     ITimelock public immutable timelock;
     uint256 public immutable expiration;
 
     error ExpirationNotReached();
+    error ExpirationReached();
 
     /**
      * @dev Constructor to initialize the contract with the Security Council multisig and timelock.
@@ -32,8 +34,8 @@ contract SecurityCouncil is ReverseClaimer, Ownable2Step {
     {
         timelock = _timelock;
 
-        // Set expiration to 2 years from deployment
-        expiration = block.timestamp + (2 * 365 days);
+        // Set expiration to 2 years from deployment + voting period
+        expiration = block.timestamp + (2 * 365 days) + 7 days;
 
         // security council multisig needs to call acceptOwnership()
         transferOwnership(securityCouncilMultisig);
@@ -44,6 +46,10 @@ contract SecurityCouncil is ReverseClaimer, Ownable2Step {
      * @param proposalId ID of the proposal to cancel.
      */
     function veto(bytes32 proposalId) external onlyOwner {
+        if (block.timestamp >= expiration) {
+            revert ExpirationReached();
+        }
+
         timelock.cancel(proposalId);
     }
 

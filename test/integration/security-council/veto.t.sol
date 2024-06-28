@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import { SecurityCouncil } from "../../../src/SecurityCouncil.sol";
 import { Security_Council_Integration_Concrete_Test } from "./securityCouncil.t.sol";
 
 contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete_Test {
@@ -19,7 +20,7 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
         token.delegate(users.attacker);
 
         uint256 votingPower = token.getVotes(users.attacker);
-        assertEq(votingPower, 4_126_912_192_000_000_000_000_000);
+        assertEq(votingPower, 3_196_912_192_000_000_000_000_000);
 
         // Need to advance 1 block for delegation to be valid on governor
         vm.roll(block.number + 1);
@@ -70,7 +71,7 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
         assertTrue(timelock.isOperation(proposalIdInTimelock));
     }
 
-    function test_Veto_Security_Coucil_Vetoing() public {
+    function test_Security_Council_Vetoing() public {
         // Security Council vetoing. Canceling the operation on timelock
         vm.prank(users.securityCouncilMultisig);
         securityCouncil.veto(proposalIdInTimelock);
@@ -92,6 +93,28 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
         assertTrue(timelock.hasRole(PROPOSER_ROLE, address(governor)));
     }
 
+    function test_Revert_When_Security_Coucil_Vetoing_After_Expiration() public {
+        // Security Council trying to veto after expiration
+        vm.warp(securityCouncil.expiration());
+        vm.expectRevert(SecurityCouncil.ExpirationReached.selector);
+        vm.prank(users.securityCouncilMultisig);
+        securityCouncil.veto(proposalIdInTimelock);
+
+        // Check that operation exists
+        assertTrue(timelock.isOperation(proposalIdInTimelock));
+
+        // Check that operation is ready to execute
+        assertTrue(timelock.isOperationReady(proposalIdInTimelock));
+
+        // Execute operation
+        governor.execute(targets, values, calldatas, descriptionHash);
+        assertTrue(timelock.isOperationDone(proposalIdInTimelock));
+
+        // Check that the malicious proposal had effect.
+        assertTrue(timelock.hasRole(PROPOSER_ROLE, users.attacker));
+        assertFalse(timelock.hasRole(PROPOSER_ROLE, address(governor)));
+    }
+
     function test_Veto_Random_User_Trying_Veto() public {
         // Expect to revert because isn't the security council multisig calling the veto
         vm.expectRevert("Ownable: caller is not the owner");
@@ -102,12 +125,12 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
         assertTrue(timelock.isOperation(proposalIdInTimelock));
     }
 
-    function test_Queue_After_Veto_Should_Fail() public {
+    function test_Revert_When_Queue_After_Veto() public {
         // Check state before veto
         assertEq(governor.state(proposalId), uint8(ProposalState.Queued));
 
         // Veto happened
-        test_Veto_Security_Coucil_Vetoing();
+        test_Security_Council_Vetoing();
 
         // Check state after veto, still the same as before the veto
         assertEq(governor.state(proposalId), uint8(ProposalState.Queued));

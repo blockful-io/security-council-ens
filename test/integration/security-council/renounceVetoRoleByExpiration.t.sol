@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import { SecurityCouncil } from "../../../src/SecurityCouncil.sol";
-
 import { Security_Council_Integration_Concrete_Test } from "./securityCouncil.t.sol";
 
 contract RenounceVetoRoleByExpiration_Integration_Concrete_Test is Security_Council_Integration_Concrete_Test {

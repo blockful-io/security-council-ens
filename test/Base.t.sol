@@ -45,13 +45,13 @@ contract Base_Test is Test {
     //////////////////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual {
-        vm.createSelectFork({ blockNumber: 19_618_708, urlOrAlias: "mainnet" });
+        vm.createSelectFork({ blockNumber: 20_186_575, urlOrAlias: "mainnet" });
 
         // Create users for testing.
         users = Users({
             deployer: makeAddr("Deployer"),
             alice: makeAddr("Alice"),
-            securityCouncilMultisig: makeAddr("SecurityCouncilMultisig"),
+            securityCouncilMultisig: address(0x53589828690662ead300299fF70aE11FD1AF9A16),
             attacker: makeAddr("Attacker")
         });
 

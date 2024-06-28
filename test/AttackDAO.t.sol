@@ -11,7 +11,7 @@ contract Attack_DAO_Test is Base_Test {
         token.delegate(users.attacker);
 
         uint256 votingPower = token.getVotes(users.attacker);
-        assertEq(votingPower, 4_126_912_192_000_000_000_000_000);
+        assertEq(votingPower, 3_196_912_192_000_000_000_000_000);
 
         // Need to advance 1 block for delegation to be valid on governor
         vm.roll(block.number + 1);
@@ -24,7 +24,7 @@ contract Attack_DAO_Test is Base_Test {
         uint256[] memory values = new uint256[](3);
         values[0] = 0;
         values[1] = 0;
-        values[2] = 5_370_845_482_402_118_767_544;
+        values[2] = 6_239_230_181_912_743_837_473;
         bytes[] memory calldatas = new bytes[](3);
         calldatas[0] = abi.encodeCall(timelock.grantRole, (timelock.PROPOSER_ROLE(), users.attacker));
         calldatas[1] = abi.encodeCall(timelock.revokeRole, (timelock.PROPOSER_ROLE(), address(governor)));
