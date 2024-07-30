@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import { SecurityCouncil } from "../../../src/SecurityCouncil.sol";
-import { Security_Council_Integration_Concrete_Test } from "./securityCouncil.t.sol";
+import { Security_Council_Fork_Test } from "./securityCouncil.t.sol";
 
-contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete_Test {
+contract Veto_Fork_Test is Security_Council_Fork_Test {
     bytes32 proposalIdInTimelock;
     uint256 proposalId;
     address[] targets;
@@ -13,14 +13,14 @@ contract Veto_Integration_Concrete_Test is Security_Council_Integration_Concrete
     bytes32 descriptionHash;
 
     function setUp() public virtual override {
-        Security_Council_Integration_Concrete_Test.setUp();
+        Security_Council_Fork_Test.setUp();
 
         // Delegate from top token holder (binance, with 4m $ENS in this case)
-        vm.prank(0x5a52E96BAcdaBb82fd05763E25335261B270Efcb);
+        vm.prank(0x245445940B317E509002eb682E03f4429184059d);
         token.delegate(users.attacker);
 
         uint256 votingPower = token.getVotes(users.attacker);
-        assertEq(votingPower, 1_546_912_192_000_000_000_000_000);
+        assertEq(votingPower, 1_468_580_589_682_917_238_429_138);
 
         // Need to advance 1 block for delegation to be valid on governor
         vm.roll(block.number + 1);

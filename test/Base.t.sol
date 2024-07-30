@@ -45,7 +45,7 @@ contract Base_Test is Test {
     //////////////////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual {
-        vm.createSelectFork({ blockNumber: 20_186_575, urlOrAlias: "mainnet" });
+        vm.createSelectFork({ blockNumber: 20_417_177, urlOrAlias: "mainnet" });
 
         // Create users for testing.
         users = Users({
